@@ -106,10 +106,28 @@ public class Model extends Observable {
      *    value, then the leading two tiles in the direction of motion merge,
      *    and the trailing tile does not.
      * */
-    public boolean tilt(Side side) {
+    public boolean tilt(Side side){
         boolean changed;
         changed = false;
 
+        board.setViewingPerspective(side);
+        for (int c = 0; c < 4; c += 1){
+            boolean col_changed = false;
+            boolean skipped = false;
+            for (int r = 3; r >= 0; r -= 1){
+                if (board.tile(c, r) != null){
+                    Tile t = board.tile(c, r);
+                    boolean[] mv = moveTile(t, c, r, col_changed, skipped, changed);
+                    if (mv[0] == true){
+                        col_changed = true;
+                        score += t.value() * 2;
+                    }
+                    skipped = mv[1];
+                    changed = mv[2];
+                }
+            }
+        }
+        board.setViewingPerspective(Side.NORTH);
         // TODO: Modify this.board (and perhaps this.score) to account
         // for the tilt to the Side SIDE. If the board changed, set the
         // changed local variable to true.
@@ -120,6 +138,43 @@ public class Model extends Observable {
         }
         return changed;
     }
+
+    public boolean[] moveTile(Tile t, int c, int r, boolean col_changed, boolean skipped, boolean changed){
+        boolean[] ret_val = new boolean[3];
+        if (skipped){
+            col_changed = false;
+        }
+        while (r+1 < 4 && board.tile(c, r+1) == null){
+            r += 1;
+            changed = true;
+        }
+        if (r+1 < 4 && board.tile(c, r+1).value() == t.value() && (!col_changed)){
+            board.move(c, r+1, t);
+            skipped = false;
+            col_changed = true;
+            changed = true;
+        }
+        else{
+            board.move(c, r, t);
+            skipped = true;
+            col_changed = false;
+        }
+        ret_val[0] = col_changed;
+        ret_val[1] = skipped;
+        ret_val[2] = changed;
+        return ret_val;
+    }
+
+    public int rowCount(int c){
+        int count = 0;
+        for (int r = 0; r < 4; r += 1){
+            if (board.tile(c, r) != null){
+                count += 1;
+            }
+        }
+        return count;
+    }
+
 
     /** Checks if the game is over and sets the gameOver variable
      *  appropriately.
@@ -138,6 +193,14 @@ public class Model extends Observable {
      * */
     public static boolean emptySpaceExists(Board b) {
         // TODO: Fill in this function.
+        for (int i = 0; i < 4; i += 1){
+            for (int j = 0; j < 4; j += 1){
+                System.out.println(b.tile(i, j));
+                if (b.tile(i, j) == null){
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
@@ -147,7 +210,14 @@ public class Model extends Observable {
      * given a Tile object t, we get its value with t.value().
      */
     public static boolean maxTileExists(Board b) {
-        // TODO: Fill in this function.
+        for (int i = 0; i < 4; i += 1){
+            for (int j = 0; j < 4; j += 1){
+                System.out.println(b.tile(i, j));
+                if (b.tile(i, j) != null && b.tile(i, j).value() == MAX_PIECE){
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
@@ -159,9 +229,34 @@ public class Model extends Observable {
      */
     public static boolean atLeastOneMoveExists(Board b) {
         // TODO: Fill in this function.
+        if (emptySpaceExists(b)){
+            return true;
+        }
+        for (int i = 0; i < 4; i += 1){
+            for (int j = 0; j < 4; j += 1){
+                for (int e = -1; e <= 1; e += 2){
+                    if (inBoard(i, e)){
+                        if (b.tile(i + e, j).value() == b.tile(i, j).value()){
+                            return true;
+                        }
+                    if (inBoard(j, e)){
+                        if (b.tile(i, j + e).value() == b.tile(i, j).value()){
+                            return true;
+                        }
+                    }
+                    }
+                }
+            }
+        }
         return false;
     }
 
+    public static boolean inBoard(int ij, int e){
+        if (ij + e >= 0 && ij + e < 4){
+            return true;
+        }
+        return false;
+    }
 
     @Override
      /** Returns the model as a string, used for debugging. */
